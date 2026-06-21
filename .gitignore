@@ -1,1 +1,13 @@
 .env
+
+*.exe
+*.exe_usr
+*.dll
+*.so
+*.dylib
+bin/
+
+/chirpy_bootdev
+
+.DS_Store
+Thumbs.db
