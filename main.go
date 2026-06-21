@@ -1,26 +1,42 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/ivanorribo/chirpy_bootdev/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	handlerCfg     http.Handler
+	dbQueries      *database.Queries
 }
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	apiCfg := &apiConfig{}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dbQueries := database.New(db)
+	apiCfg.dbQueries = dbQueries
 	const port = ":8080"
 	mux := http.NewServeMux()
-	apiCfg := &apiConfig{}
 	handler := http.FileServer(http.Dir("."))
 
-	mux.HandleFunc("GET /healthz", handlerReadiness) // add readiness handler using function from functions.go
-	mux.HandleFunc("GET /metrics", apiCfg.getFileserverHits)
-	mux.HandleFunc("POST /reset", apiCfg.resetFileserverHits)
-
+	mux.HandleFunc("GET /api/healthz", handlerReadiness) // add readiness handler using function from functions.go
+	mux.HandleFunc("GET /admin/metrics", apiCfg.getFileserverHits)
+	mux.HandleFunc("POST /admin/reset", apiCfg.resetFileserverHits)
+	mux.HandleFunc("POST /api/validate_chirp", validateChirp)
 	stripHandler := http.StripPrefix("/app/", handler) // strip the /app prefix so we can differentiate between the /app/ path and the root path
 	mux.Handle("/app", http.RedirectHandler("/app/", http.StatusPermanentRedirect))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(stripHandler))
