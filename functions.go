@@ -32,7 +32,21 @@ func (cfg *apiConfig) getFileserverHits(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *apiConfig) resetFileserverHits(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		log.Printf("Resetting fileserver hits is not allowed in %s environment\n", cfg.platform)
+		w.WriteHeader(403)
+		w.Write([]byte("Resetting fileserver hits is not allowed in this environment"))
+		return
+	}
+	log.Printf("Resetting fileserver hits to 0\n")
 	cfg.fileserverHits.Store(0)
+	err := cfg.dbQueries.DeleteUser(r.Context())
+	if err != nil {
+		log.Printf("Error deleting users: %s\n", err)
+		w.WriteHeader(500)
+		w.Write([]byte("Failed to reset users"))
+		return
+	}
 	w.WriteHeader(200)
 }
 
@@ -80,4 +94,26 @@ func validateChirp(w http.ResponseWriter, r *http.Request) {
 	cleanBody := cleanWords(params.Body)
 	respondWithJSON(w, 200, returnVals{Cleaned_body: cleanBody})
 
+}
+
+func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email string `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		log.Printf("Error decoding parameters: %s\n", err)
+		respondWithError(w, 500, "Failed decoding")
+		return
+	}
+	NewUser, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
+	if err != nil {
+		log.Printf("Error creating user: %s\n", err)
+		respondWithError(w, 500, "Failed creating user")
+		return
+	}
+	respondWithJSON(w, 201, User{ID: NewUser.ID, CreatedAt: NewUser.CreatedAt, UpdatedAt: NewUser.UpdatedAt, Email: NewUser.Email})
 }
