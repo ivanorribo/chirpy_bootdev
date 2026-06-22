@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -48,72 +47,4 @@ func (cfg *apiConfig) resetFileserverHits(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(200)
-}
-
-func respondWithError(w http.ResponseWriter, code int, msg string) {
-	type returnVals struct {
-		Error string `json:"error"`
-	}
-	respondWithJSON(w, code, returnVals{Error: msg})
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-
-	dat, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("Error marshalling JSON %s\n", err)
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(dat)
-}
-
-func validateChirp(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Body string `json:"body"`
-	}
-	type returnVals struct {
-		Cleaned_body string `json:"cleaned_body"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding parameters: %s\n", err)
-		respondWithError(w, 500, "Failed decoding")
-		return
-	}
-	if len(params.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long")
-		return
-	}
-	cleanBody := cleanWords(params.Body)
-	respondWithJSON(w, 200, returnVals{Cleaned_body: cleanBody})
-
-}
-
-func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Email string `json:"email"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding parameters: %s\n", err)
-		respondWithError(w, 500, "Failed decoding")
-		return
-	}
-	NewUser, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
-	if err != nil {
-		log.Printf("Error creating user: %s\n", err)
-		respondWithError(w, 500, "Failed creating user")
-		return
-	}
-	respondWithJSON(w, 201, User{ID: NewUser.ID, CreatedAt: NewUser.CreatedAt, UpdatedAt: NewUser.UpdatedAt, Email: NewUser.Email})
 }

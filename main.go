@@ -28,6 +28,14 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
@@ -50,8 +58,8 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness) // add readiness handler using function from functions.go
 	mux.HandleFunc("GET /admin/metrics", apiCfg.getFileserverHits)
 	mux.HandleFunc("POST /admin/reset", apiCfg.resetFileserverHits)
-	mux.HandleFunc("POST /api/validate_chirp", validateChirp)
 	mux.HandleFunc("POST /api/users", apiCfg.createUser)
+	mux.HandleFunc("POST /api/chirps", apiCfg.createChirp)
 	stripHandler := http.StripPrefix("/app/", handler) // strip the /app prefix so we can differentiate between the /app/ path and the root path
 	mux.Handle("/app", http.RedirectHandler("/app/", http.StatusPermanentRedirect))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(stripHandler))
