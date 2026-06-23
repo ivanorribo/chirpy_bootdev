@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/ivanorribo/chirpy_bootdev/internal/auth"
+	"github.com/ivanorribo/chirpy_bootdev/internal/database"
 )
 
 func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email string `json:"email"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -19,7 +23,16 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 500, "Failed decoding")
 		return
 	}
-	NewUser, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		log.Printf("Error hashing password: %s\n", err)
+		respondWithError(w, 500, "Failed hashing password")
+		return
+	}
+	NewUser, err := cfg.dbQueries.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	})
 	if err != nil {
 		log.Printf("Error creating user: %s\n", err)
 		respondWithError(w, 500, "Failed creating user")
