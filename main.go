@@ -49,6 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 	dbQueries := database.New(db)
 	apiCfg.dbQueries = dbQueries
 	const port = ":8080"
@@ -60,6 +61,8 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.resetFileserverHits)
 	mux.HandleFunc("POST /api/users", apiCfg.createUser)
 	mux.HandleFunc("POST /api/chirps", apiCfg.createChirp)
+	mux.HandleFunc("GET /api/chirps", apiCfg.retrieveChirps)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.retrieveChirpByID)
 	stripHandler := http.StripPrefix("/app/", handler) // strip the /app prefix so we can differentiate between the /app/ path and the root path
 	mux.Handle("/app", http.RedirectHandler("/app/", http.StatusPermanentRedirect))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(stripHandler))
