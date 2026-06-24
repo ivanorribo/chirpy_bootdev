@@ -62,3 +62,32 @@ func TestWrongSecret(t *testing.T) {
 	_, err = ValidateJWT(token, wrongSecret)
 	assert.Error(t, err)
 }
+
+func TestGetBearerToken(t *testing.T) {
+	// Test with a valid Authorization header
+	headers := make(map[string][]string)
+	headers["Authorization"] = []string{"Bearer my-valid-token"}
+	token, err := GetBearerToken(headers)
+	assert.NoError(t, err)
+	assert.Equal(t, "my-valid-token", token)
+
+	// Test with a missing Authorization header
+	headers = make(map[string][]string)
+	_, err = GetBearerToken(headers)
+	assert.Error(t, err)
+
+	// Test with an invalid Authorization header format
+	headers = make(map[string][]string)
+	headers["Authorization"] = []string{"InvalidFormat my-invalid-token"}
+	_, err = GetBearerToken(headers)
+	assert.Error(t, err)
+}
+
+func testGetBearerTokenWithExtraSpaces(t *testing.T) {
+	// Test with extra spaces in the Authorization header
+	headers := make(map[string][]string)
+	headers["Authorization"] = []string{"   Bearer    my-valid-token   "}
+	token, err := GetBearerToken(headers)
+	assert.NoError(t, err)
+	assert.Equal(t, "my-valid-token", token)
+}

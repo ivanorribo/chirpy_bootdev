@@ -19,6 +19,7 @@ type apiConfig struct {
 	handlerCfg     http.Handler
 	dbQueries      *database.Queries
 	platform       string
+	secretKey      string
 }
 
 type User struct {
@@ -27,6 +28,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
+	Token     string    `json:"token"`
 }
 
 type Chirp struct {
@@ -44,7 +46,11 @@ func main() {
 	if platform == "" {
 		log.Fatal("PLATFORM environment variable is not set")
 	}
-	apiCfg := &apiConfig{platform: platform}
+	secretKey := os.Getenv("SECRET_KEY")
+	if secretKey == "" {
+		log.Fatal("SECRET_KEY environment variable is not set")
+	}
+	apiCfg := &apiConfig{platform: platform, secretKey: secretKey}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {

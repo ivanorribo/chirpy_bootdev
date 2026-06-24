@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ivanorribo/chirpy_bootdev/internal/auth"
 	"github.com/ivanorribo/chirpy_bootdev/internal/database"
 )
 
 func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type returnVals struct {
 		ID        uuid.UUID `json:"id"`
@@ -22,10 +22,22 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 		Body      string    `json:"body"`
 		UserID    uuid.UUID `json:"user_id"`
 	}
-
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Error getting bearer token: %s\n", err)
+		respondWithError(w, 401, "Unauthorized")
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.secretKey)
+	if err != nil {
+		log.Printf("Error validating JWT: %s\n", err)
+		respondWithError(w, 401, "Unauthorized")
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
+
 	if err != nil {
 		log.Printf("Error decoding parameters: %s\n", err)
 		respondWithError(w, 500, "Failed decoding")
@@ -37,9 +49,9 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	params.Body = cleanWords(params.Body)
-	Chirp, err := cfg.dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{
+	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   params.Body,
-		UserID: params.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		log.Printf("Error creating chirp: %s\n", err)
@@ -47,10 +59,10 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithJSON(w, 201, returnVals{
-		ID:        Chirp.ID,
-		CreatedAt: Chirp.CreatedAt,
-		UpdatedAt: Chirp.UpdatedAt,
-		Body:      Chirp.Body,
-		UserID:    Chirp.UserID,
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
 	})
 }
