@@ -71,6 +71,8 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", apiCfg.revokeRefreshToken)
 	mux.HandleFunc("GET /api/chirps", apiCfg.retrieveChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.retrieveChirpByID)
+	mux.HandleFunc("PUT /api/users", apiCfg.updateUser)
+
 	stripHandler := http.StripPrefix("/app/", handler) // strip the /app prefix so we can differentiate between the /app/ path and the root path
 	mux.Handle("/app", http.RedirectHandler("/app/", http.StatusPermanentRedirect))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(stripHandler))
