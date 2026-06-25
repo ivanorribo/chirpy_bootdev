@@ -16,12 +16,21 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 
+	type returnVals struct {
+		UserID       string    `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Email        string    `json:"email"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s\n", err)
-		respondWithError(w, 500, "Failed decoding")
+		respondWithError(w, 400, "Invalid request body")
 		return
 	}
 
@@ -39,7 +48,7 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.MakeJWT(user.ID, cfg.secretKey, time.Minute*60) // Token valid for 60 minutes
+	token, err := auth.MakeJWT(user.ID, cfg.secretKey, time.Hour) // Token valid for 60 minutes
 	if err != nil {
 		log.Printf("Error creating JWT: %s\n", err)
 		respondWithError(w, 500, "Failed to create JWT")
@@ -50,12 +59,19 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	_, err = cfg.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    user.ID,
-		ExpiresAt: time.Now().Add(((24 * time.Hour) * 60)), // Refresh token valid for 60 days
+		ExpiresAt: time.Now().Add(60 * 24 * time.Hour), // Refresh token valid for 60 days
 	})
 	if err != nil {
 		log.Printf("Error creating refresh token: %s\n", err)
 		respondWithError(w, 500, "Failed to create refresh token")
 		return
 	}
-	respondWithJSON(w, 200, User{ID: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: token, RefreshToken: refreshToken})
+	respondWithJSON(w, 200, returnVals{
+		UserID:       user.ID.String(),
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
+	})
 }
