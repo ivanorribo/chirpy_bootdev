@@ -38,5 +38,5 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 500, "Failed creating user")
 		return
 	}
-	respondWithJSON(w, 201, User{ID: NewUser.ID, CreatedAt: NewUser.CreatedAt, UpdatedAt: NewUser.UpdatedAt, Email: NewUser.Email})
+	respondWithJSON(w, 201, User{ID: NewUser.ID, CreatedAt: NewUser.CreatedAt, UpdatedAt: NewUser.UpdatedAt, Email: NewUser.Email, IsChirpyRed: NewUser.IsChirpyRed})
 }
