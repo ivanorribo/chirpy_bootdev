@@ -20,6 +20,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	secretKey      string
+	polkaKey       string
 }
 
 type User struct {
@@ -49,7 +50,11 @@ func main() {
 	if secretKey == "" {
 		log.Fatal("SECRET_KEY environment variable is not set")
 	}
-	apiCfg := &apiConfig{platform: platform, secretKey: secretKey}
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY environment variable is not set")
+	}
+	apiCfg := &apiConfig{platform: platform, secretKey: secretKey, polkaKey: polkaKey}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {

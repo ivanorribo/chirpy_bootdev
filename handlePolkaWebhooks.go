@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/ivanorribo/chirpy_bootdev/internal/auth"
 )
 
 func (cfg *apiConfig) upgradeChirpyToRed(w http.ResponseWriter, r *http.Request) {
@@ -14,9 +15,15 @@ func (cfg *apiConfig) upgradeChirpyToRed(w http.ResponseWriter, r *http.Request)
 			UserID uuid.UUID `json:"user_id"`
 		} `json:"data"`
 	}
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil || apiKey != cfg.polkaKey {
+		respondWithError(w, 401, "Unauthorized")
+		return
+	}
+
 	param := &paramaters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(param)
+	err = decoder.Decode(param)
 	if err != nil {
 		respondWithError(w, 400, "Invalid request body")
 		return
